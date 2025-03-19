@@ -73,4 +73,5 @@ def generate_diagram(request: DiagramRequest):
     return {"mermaid_syntax": generate_mermaid_syntax(request.user_input, request.diagram_type)}
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))  # Use the Render-assigned port
     uvicorn.run(app, host="0.0.0.0", port=8000)
