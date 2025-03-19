@@ -2,7 +2,4 @@ fastapi
 uvicorn
 requests
 python-dotenv
-transformers
-torch
-apexcharts
-chartjs
+pydantic

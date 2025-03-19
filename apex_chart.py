@@ -1,23 +1,31 @@
 import requests
-import json
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import uvicorn
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = FastAPI()
 
+# Set up logging for debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class ChartRequest(BaseModel):
     user_input: str
     chart_type: str
 
 def generate_apexcharts_syntax(user_input, chart_type):
+    api_key = os.getenv("PERPLEXITY_API_KEY")
+    if not api_key:
+        logger.error("PERPLEXITY_API_KEY not set")
+        return "Error: PERPLEXITY_API_KEY not set in environment variables"
+    
     api_url = "https://api.perplexity.ai/chat/completions"
     headers = {
-        "Authorization": f"Bearer {os.getenv('PERPLEXITY_API_KEY')}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
     
@@ -32,32 +40,36 @@ def generate_apexcharts_syntax(user_input, chart_type):
         "max_tokens": 700,
         "temperature": 0.2,
         "top_p": 0.9,
-        "search_domain_filter": None,
-        "return_images": False,
-        "return_related_questions": False,
-        "search_recency_filter": None,
-        "top_k": 0,
         "stream": False,
         "presence_penalty": 0,
-        "frequency_penalty": 1,
-        "response_format": None
+        "frequency_penalty": 1
     }
     
-    response = requests.post(api_url, headers=headers, json=payload)
-    
-    if response.status_code == 200:
+    try:
+        response = requests.post(api_url, headers=headers, json=payload)
+        response.raise_for_status()  # Raises exception for 4xx/5xx errors
         data = response.json()
-        return data.get("choices", [{}])[0].get("message", {}).get("content", "Error: No response from API")
-    else:
-        return f"Error: {response.status_code} - {response.text}"
+        result = data.get("choices", [{}])[0].get("message", {}).get("content", "Error: No response from API")
+        logger.info(f"Generated ApexCharts syntax: {result}")
+        return result
+    except requests.RequestException as e:
+        logger.error(f"API error: {str(e)}")
+        return f"Error: Failed to connect to Perplexity API - {str(e)}"
+
+@app.get("/", response_model=dict)
+@app.head("/")
+def home():
+    return {"message": "ApexCharts API is running!"}
 
 @app.post("/generate_chart")
 def generate_chart(request: ChartRequest):
-    return {"chart_syntax": generate_apexcharts_syntax(request.user_input, request.chart_type)}
+    logger.info(f"Received request: {request.user_input}, {request.chart_type}")
+    try:
+        result = generate_apexcharts_syntax(request.user_input, request.chart_type)
+        return {"chart_syntax": result}
+    except Exception as e:
+        logger.error(f"Error in generate_chart: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == "__main__":
-    user_input = input("Enter your data or text: ")
-    chart_type = input("Enter chart type (Line, Bar, Pie, Donut, Area, Radar, Scatter, Bubble, Heatmap, Mixed): ")
-    print("\nGenerated ApexCharts Syntax:\n")
-    print(generate_apexcharts_syntax(user_input, chart_type))
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# Removed if __name__ == "__main__" block for Render deployment
+# Use this for local testing only if needed
