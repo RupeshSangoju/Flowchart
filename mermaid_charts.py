@@ -63,13 +63,14 @@ def generate_mermaid_syntax(user_input, diagram_type):
     else:
         return f"Error: {response.status_code} - {response.text}"
 
+@app.get("/")
+def home():
+    return {"message": "Mermaid Diagram API is running!"}
+
+
 @app.post("/generate_diagram")
 def generate_diagram(request: DiagramRequest):
     return {"mermaid_syntax": generate_mermaid_syntax(request.user_input, request.diagram_type)}
 
 if __name__ == "__main__":
-    user_input = input("Enter your text description: ")
-    diagram_type = input("Enter diagram type (Flowchart, Mindmap, Timeline, User Journey, Architecture): ")
-    print("\nGenerated Mermaid.js Syntax:\n")
-    print(generate_mermaid_syntax(user_input, diagram_type))
     uvicorn.run(app, host="0.0.0.0", port=8000)
