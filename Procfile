@@ -1,0 +1,1 @@
+web: uvicorn mermaid_charts:app --host 0.0.0.0 --port $PORT
