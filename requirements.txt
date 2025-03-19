@@ -4,3 +4,5 @@ requests
 python-dotenv
 transformers
 torch
+apexcharts
+chartjs
